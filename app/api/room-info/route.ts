@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   if (!room) {
     return NextResponse.json({ error: "Room not found." }, { status: 404 });
   }
-  if (room.status !== "active") {
+  if (room.status !== "active" && room.status !== "lobby") {
     return NextResponse.json({ error: "This room is closed." }, { status: 403 });
   }
 

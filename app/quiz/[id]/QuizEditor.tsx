@@ -589,16 +589,22 @@ export default function QuizEditor({ quiz, existingRoom, sessions, userName }: P
                 {/* Links */}
                 <div className="flex flex-col gap-2 sm:ml-auto">
                   <a
-                    href={`/results/${publishedRoom.roomId}`}
+                    href={`/lobby/${publishedRoom.code}`}
                     className="px-4 py-2 text-sm font-semibold bg-white text-slate-900 rounded-lg hover:bg-white/90 transition-colors text-center"
                   >
-                    View Results →
+                    Open Lobby →
+                  </a>
+                  <a
+                    href={`/results/${publishedRoom.roomId}`}
+                    className="px-4 py-2 text-sm font-medium text-white/60 border border-white/12 rounded-lg hover:bg-white/8 transition-all text-center"
+                  >
+                    View Results
                   </a>
                   <button
                     type="button"
                     onClick={handlePublish}
                     disabled={saving}
-                    className="px-4 py-2 text-sm font-medium text-white/60 border border-white/12 rounded-lg hover:bg-white/8 disabled:opacity-40 transition-all"
+                    className="px-4 py-2 text-sm font-medium text-white/40 border border-white/8 rounded-lg hover:bg-white/5 disabled:opacity-40 transition-all"
                   >
                     New code
                   </button>
