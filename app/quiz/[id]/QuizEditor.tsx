@@ -79,7 +79,7 @@ function QuestionCard({ q, index, total, dbIds, onChange, onDelete, onMove, onRe
     <div className="relative bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 space-y-4">
       {/* Regenerating overlay */}
       {q.regenerating && (
-        <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm rounded-2xl flex items-center justify-center z-10">
+        <div className="absolute inset-0 bg-[#080810]/70 backdrop-blur-sm rounded-2xl flex items-center justify-center z-10">
           <div className="flex items-center gap-2 text-sm font-medium text-indigo-300">
             <motion.svg
               className="w-4 h-4"
@@ -172,7 +172,7 @@ function QuestionCard({ q, index, total, dbIds, onChange, onDelete, onMove, onRe
         <select
           value={q.correct_answer}
           onChange={(e) => onChange(q.id, { correct_answer: e.target.value })}
-          className="w-full px-3 py-2 text-sm appearance-none bg-slate-900 border border-white/10 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 [&>option]:bg-slate-900 [&>option]:text-white"
+          className="w-full px-3 py-2 text-sm appearance-none bg-[#0d0d1a] border border-white/10 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 [&>option]:bg-[#0d0d1a] [&>option]:text-white"
         >
           <option value="">— select correct answer —</option>
           {q.options.map((opt, i) => (
@@ -343,11 +343,11 @@ export default function QuizEditor({ quiz, existingRoom, userName }: Props) {
   const anyRegenerating = questions.some((q) => q.regenerating);
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-[#080810]">
       {/* Sticky header: nav + controls */}
       <div className="sticky top-0 z-20">
         <TeacherNav name={userName} />
-        <div className="bg-slate-950/90 backdrop-blur-xl border-b border-white/8">
+        <div className="bg-[#080810]/90 backdrop-blur-xl border-b border-white/8">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-3">
             <button
               type="button"

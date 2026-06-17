@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { listContainer, listItem } from "@/lib/motion";
 
 type Quiz = {
   id: string;
@@ -25,13 +26,16 @@ export default function QuizHistory({ quizzes }: { quizzes: Quiz[] }) {
           No quizzes yet. Create your first one!
         </p>
       ) : (
-        <div className="space-y-1">
-          {quizzes.map((quiz, i) => (
+        <motion.div
+          className="space-y-1"
+          variants={listContainer}
+          initial="hidden"
+          animate="show"
+        >
+          {quizzes.map((quiz) => (
             <motion.button
               key={quiz.id}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.04 }}
+              variants={listItem}
               onClick={() => router.push(`/quiz/${quiz.id}`)}
               className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/8 transition-all text-left group"
             >
@@ -58,7 +62,7 @@ export default function QuizHistory({ quizzes }: { quizzes: Quiz[] }) {
               </span>
             </motion.button>
           ))}
-        </div>
+        </motion.div>
       )}
     </div>
   );

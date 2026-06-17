@@ -95,7 +95,7 @@ export default function LandingHero() {
         <motion.div variants={fadeUp}>
           <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/8 rounded-full text-xs font-medium text-white/55">
             <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-            Powered by Groq AI
+            AI-powered
           </span>
         </motion.div>
 

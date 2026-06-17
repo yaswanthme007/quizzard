@@ -46,7 +46,7 @@ export default async function LandingPage() {
       <LandingHero />
 
       <footer className="relative z-10 text-center py-6 text-xs text-white/20">
-        Built with Next.js · Powered by Groq AI
+        Built with Next.js · AI-powered
       </footer>
     </div>
   );

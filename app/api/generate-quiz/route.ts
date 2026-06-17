@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { groqChat, GroqError } from "@/lib/groq";
+import { aiChat, AIError, type AIProvider } from "@/lib/ai";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 const TEXT_LIMIT = 25_000;
@@ -49,21 +49,22 @@ function stripFences(raw: string): string {
 
 function parseQuestions(raw: string): QuizQuestion[] {
   const parsed = JSON.parse(stripFences(raw));
-  if (!Array.isArray(parsed)) throw new Error("Groq response is not a JSON array.");
+  if (!Array.isArray(parsed)) throw new Error("AI response is not a JSON array.");
   return parsed as QuizQuestion[];
 }
 
-async function callGroq(
+async function callAI(
   messages: ReturnType<typeof buildMessages>,
   apiKey: string,
+  provider: AIProvider,
   allow429Retry = true
 ): Promise<string> {
   try {
-    return await groqChat(messages, { max_tokens: 4096, temperature: 0.4, apiKey });
+    return await aiChat(messages, { provider, apiKey, max_tokens: 4096, temperature: 0.4 });
   } catch (err) {
-    if (allow429Retry && err instanceof GroqError && err.status === 429) {
+    if (allow429Retry && err instanceof AIError && err.status === 429) {
       await new Promise((r) => setTimeout(r, 2000));
-      return groqChat(messages, { max_tokens: 4096, temperature: 0.4, apiKey });
+      return aiChat(messages, { provider, apiKey, max_tokens: 4096, temperature: 0.4 });
     }
     throw err;
   }
@@ -79,20 +80,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  // Load user's Groq API key; fall back to shared env variable
   const { data: profile } = await supabase
     .from("profiles")
-    .select("groq_api_key")
+    .select("groq_api_key, ai_provider")
     .eq("id", user.id)
     .maybeSingle();
 
   const apiKey = profile?.groq_api_key || process.env.GROQ_API_KEY || "";
   if (!apiKey) {
     return NextResponse.json(
-      { error: "No Groq API key configured. Add your key in Dashboard → Groq API Key." },
+      { error: "No AI API key configured. Add your key in Dashboard → AI Provider." },
       { status: 400 }
     );
   }
+
+  const provider: AIProvider =
+    (profile?.ai_provider as AIProvider | null) ?? "groq";
 
   let body: RequestBody;
   try {
@@ -110,22 +113,20 @@ export async function POST(request: NextRequest) {
   const truncatedText = text.slice(0, TEXT_LIMIT);
   const messages = buildMessages(truncatedText, count, difficulty);
 
-  // Call Groq — retry once on 429
   let raw: string;
   try {
-    raw = await callGroq(messages, apiKey);
+    raw = await callAI(messages, apiKey, provider);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Groq request failed.";
+    const message = err instanceof Error ? err.message : "AI request failed.";
     return NextResponse.json({ error: message }, { status: 502 });
   }
 
-  // Parse JSON — retry the Groq call once on parse failure
   let questions: QuizQuestion[];
   try {
     questions = parseQuestions(raw);
   } catch {
     try {
-      raw = await callGroq(messages, apiKey, false);
+      raw = await callAI(messages, apiKey, provider, false);
       questions = parseQuestions(raw);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to parse quiz JSON.";
@@ -136,7 +137,6 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Insert quiz row
   const { data: quiz, error: quizError } = await supabase
     .from("quizzes")
     .insert({
@@ -155,7 +155,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Insert questions
   const questionRows = questions.map((q, index) => ({
     quiz_id: quiz.id,
     question_text: q.question_text,
@@ -170,7 +169,6 @@ export async function POST(request: NextRequest) {
     .insert(questionRows);
 
   if (questionsError) {
-    // Clean up the orphaned quiz row
     await supabase.from("quizzes").delete().eq("id", quiz.id);
     return NextResponse.json({ error: questionsError.message }, { status: 500 });
   }

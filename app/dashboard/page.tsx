@@ -20,7 +20,7 @@ export default async function DashboardPage() {
   const [profileResult, quizzesResult] = await Promise.all([
     supabase
       .from("profiles")
-      .select("groq_api_key")
+      .select("groq_api_key, ai_provider")
       .eq("id", user.id)
       .maybeSingle(),
     supabase
@@ -34,6 +34,7 @@ export default async function DashboardPage() {
   const profile = profileResult.data;
   const quizzes = quizzesResult.data ?? [];
   const hasApiKey = !!(profile?.groq_api_key) || !!process.env.GROQ_API_KEY;
+  const savedProvider = (profile?.ai_provider as string) || "groq";
 
   const displayName: string =
     (user.user_metadata?.full_name as string | undefined) ??
@@ -44,7 +45,7 @@ export default async function DashboardPage() {
   const avatarInitial = displayName[0].toUpperCase();
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-[#080810]">
       <TeacherNav name={displayName} />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
@@ -79,7 +80,7 @@ export default async function DashboardPage() {
           {/* Right column: PDF uploader + API key settings */}
           <div className="lg:col-span-3 space-y-5">
             <PdfUploader hasApiKey={hasApiKey} />
-            <ApiKeySettings hasApiKey={!!(profile?.groq_api_key)} />
+            <ApiKeySettings hasApiKey={!!(profile?.groq_api_key)} savedProvider={savedProvider} />
           </div>
         </div>
       </main>

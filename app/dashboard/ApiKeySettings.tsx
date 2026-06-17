@@ -4,13 +4,55 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { fadeUp } from "@/lib/motion";
+import type { AIProvider } from "@/lib/ai";
 
 interface Props {
   hasApiKey: boolean;
+  savedProvider: string;
 }
 
-export default function ApiKeySettings({ hasApiKey }: Props) {
+interface ProviderConfig {
+  label: string;
+  placeholder: string;
+  hint: string;
+  hintUrl: string;
+  model: string;
+}
+
+const PROVIDERS: Record<AIProvider, ProviderConfig> = {
+  groq: {
+    label: "Groq",
+    placeholder: "gsk_…",
+    hint: "console.groq.com",
+    hintUrl: "console.groq.com",
+    model: "llama-3.3-70b-versatile",
+  },
+  openai: {
+    label: "OpenAI",
+    placeholder: "sk-…",
+    hint: "platform.openai.com",
+    hintUrl: "platform.openai.com",
+    model: "gpt-4o-mini",
+  },
+  gemini: {
+    label: "Google Gemini",
+    placeholder: "AIza…",
+    hint: "aistudio.google.com",
+    hintUrl: "aistudio.google.com",
+    model: "gemini-2.0-flash",
+  },
+};
+
+const PROVIDER_OPTIONS: AIProvider[] = ["groq", "openai", "gemini"];
+
+function isValidProvider(p: string): p is AIProvider {
+  return PROVIDER_OPTIONS.includes(p as AIProvider);
+}
+
+export default function ApiKeySettings({ hasApiKey, savedProvider }: Props) {
   const router = useRouter();
+  const initialProvider: AIProvider = isValidProvider(savedProvider) ? savedProvider : "groq";
+  const [provider, setProvider] = useState<AIProvider>(initialProvider);
   const [key, setKey] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -18,9 +60,17 @@ export default function ApiKeySettings({ hasApiKey }: Props) {
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [saveResult, setSaveResult] = useState<{ ok: boolean; message: string } | null>(null);
 
+  const config = PROVIDERS[provider];
+
   function clearResults() {
     setTestResult(null);
     setSaveResult(null);
+  }
+
+  function handleProviderChange(p: AIProvider) {
+    setProvider(p);
+    setKey("");
+    clearResults();
   }
 
   async function handleTest() {
@@ -31,7 +81,7 @@ export default function ApiKeySettings({ hasApiKey }: Props) {
       const res = await fetch("/api/test-api-key", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: key.trim() }),
+        body: JSON.stringify({ key: key.trim(), provider }),
       });
       const data = await res.json();
       setTestResult({
@@ -53,7 +103,7 @@ export default function ApiKeySettings({ hasApiKey }: Props) {
       const res = await fetch("/api/save-api-key", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: key.trim() }),
+        body: JSON.stringify({ key: key.trim(), provider }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -77,7 +127,7 @@ export default function ApiKeySettings({ hasApiKey }: Props) {
       const res = await fetch("/api/save-api-key", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: "" }),
+        body: JSON.stringify({ key: "", provider }),
       });
       if (res.ok) {
         setSaveResult({ ok: true, message: "API key removed." });
@@ -97,10 +147,38 @@ export default function ApiKeySettings({ hasApiKey }: Props) {
   return (
     <motion.section variants={fadeUp} initial="hidden" animate="show" transition={{ delay: 0.1 }}>
       <h3 className="text-xs font-semibold text-white/35 uppercase tracking-widest mb-4">
-        Groq API Key
+        AI Provider
       </h3>
 
       <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 space-y-4">
+        {/* Provider selector */}
+        <div>
+          <p className="text-xs font-medium text-white/40 mb-2">Provider</p>
+          <div className="flex rounded-xl bg-white/5 border border-white/10 p-1 gap-0.5">
+            {PROVIDER_OPTIONS.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => handleProviderChange(p)}
+                disabled={busy}
+                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                  provider === p
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "text-white/40 hover:text-white/60 disabled:opacity-40"
+                }`}
+              >
+                {PROVIDERS[p].label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Model badge */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-white/25">Model:</span>
+          <span className="font-mono text-xs text-indigo-400/70">{config.model}</span>
+        </div>
+
         {/* Status indicator */}
         <div className="flex items-start gap-3">
           <span
@@ -110,8 +188,8 @@ export default function ApiKeySettings({ hasApiKey }: Props) {
           />
           <p className="text-sm text-white/50">
             {hasApiKey
-              ? "A Groq API key is saved. Enter a new key below to replace it."
-              : "No API key saved. Add your Groq API key to enable quiz generation."}
+              ? `A ${PROVIDERS[initialProvider].label} API key is saved. Enter a new key below to replace it.`
+              : `No API key saved. Add your ${config.label} API key to enable quiz generation.`}
           </p>
         </div>
 
@@ -124,7 +202,7 @@ export default function ApiKeySettings({ hasApiKey }: Props) {
               setKey(e.target.value);
               clearResults();
             }}
-            placeholder="gsk_…"
+            placeholder={config.placeholder}
             disabled={busy}
             className="w-full px-3.5 py-2.5 pr-10 text-sm bg-white/5 border border-white/10 text-white placeholder:text-white/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 disabled:opacity-50 font-mono transition-all"
           />
@@ -216,7 +294,7 @@ export default function ApiKeySettings({ hasApiKey }: Props) {
 
         <p className="text-xs text-white/25">
           Get a free key at{" "}
-          <span className="font-medium text-white/40">console.groq.com</span>.
+          <span className="font-medium text-white/40">{config.hintUrl}</span>.
           {" "}Your key is stored securely and never exposed to students.
         </p>
       </div>

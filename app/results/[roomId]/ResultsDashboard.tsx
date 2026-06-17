@@ -77,7 +77,7 @@ function CloseRoomModal({ onConfirm, onCancel }: { onConfirm: () => void; onCanc
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
         transition={{ type: "spring", stiffness: 280, damping: 24 }}
-        className="bg-slate-900 border border-white/12 rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+        className="bg-[#0d0d1a] border border-white/12 rounded-2xl p-6 max-w-sm w-full shadow-2xl"
       >
         <h3 className="font-display text-lg font-semibold text-white mb-2">Close this room?</h3>
         <p className="text-sm text-white/50 leading-relaxed mb-6">
@@ -251,7 +251,7 @@ export default function ResultsDashboard({
   const totalQuestions = questions.length;
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-[#080810]">
       {/* Close room modal */}
       <AnimatePresence>
         {showCloseModal && (
@@ -268,7 +268,7 @@ export default function ResultsDashboard({
       {/* Sticky header */}
       <header className="sticky top-0 z-10">
         <TeacherNav name={name} />
-        <div className="bg-slate-950/90 backdrop-blur-xl border-b border-white/8">
+        <div className="bg-[#080810]/90 backdrop-blur-xl border-b border-white/8">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-3 flex-wrap">
             <button
               onClick={() => router.push("/dashboard")}

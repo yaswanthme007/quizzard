@@ -88,12 +88,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-indigo-950/40 to-slate-950 px-4">
-      {/* Background orbs */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-indigo-600/12 blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full bg-violet-600/12 blur-3xl" />
-      </div>
+    <div className="relative min-h-screen flex items-center justify-center bg-[#080810] px-4">
+      <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] rounded-full bg-indigo-600/8 blur-[120px]" />
 
       <motion.div
         initial={{ opacity: 0, y: 40, scale: 0.96 }}

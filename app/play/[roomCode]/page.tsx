@@ -324,7 +324,7 @@ export default function PlayPage({ params }: { params: { roomCode: string } }) {
 
   if (phase === "loading") {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="min-h-screen bg-[#080810] flex items-center justify-center">
         <div className="flex items-center gap-2.5 text-white/40">
           <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -337,9 +337,9 @@ export default function PlayPage({ params }: { params: { roomCode: string } }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col">
+    <div className="min-h-screen bg-[#080810] flex flex-col">
       {/* Header */}
-      <header className="bg-slate-950/80 backdrop-blur-xl border-b border-white/8 px-4 py-3 flex items-center gap-3 shrink-0">
+      <header className="bg-[#080810]/80 backdrop-blur-xl border-b border-white/8 px-4 py-3 flex items-center gap-3 shrink-0">
         <span className="font-display font-bold text-white">Quizzard</span>
         {nickname && (
           <span className="text-sm text-white/40 truncate max-w-[120px]">{nickname}</span>

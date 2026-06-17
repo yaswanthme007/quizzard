@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { groqChat, GroqError } from "@/lib/groq";
+import { aiChat, AIError, type AIProvider } from "@/lib/ai";
+
+const VALID_PROVIDERS: AIProvider[] = ["groq", "openai", "gemini"];
 
 export async function POST(request: NextRequest) {
   const supabase = await createSupabaseServerClient();
@@ -10,8 +12,11 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   let key: string;
+  let provider: AIProvider;
   try {
-    ({ key } = await request.json());
+    const body = await request.json();
+    key = body.key;
+    provider = VALID_PROVIDERS.includes(body.provider) ? body.provider : "groq";
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
@@ -21,13 +26,13 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    await groqChat(
+    await aiChat(
       [{ role: "user", content: "Say hi" }],
-      { max_tokens: 1, apiKey: key.trim() }
+      { provider, apiKey: key.trim(), max_tokens: 1 }
     );
     return NextResponse.json({ ok: true });
   } catch (err) {
-    if (err instanceof GroqError) {
+    if (err instanceof AIError) {
       return NextResponse.json(
         { error: `API returned ${err.status}. Check your key and try again.` },
         { status: 400 }
