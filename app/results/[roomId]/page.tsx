@@ -51,6 +51,12 @@ export default async function ResultsPage({ params }: Props) {
     answers = (data ?? []) as AnswerRow[];
   }
 
+  const displayName: string =
+    (user.user_metadata?.full_name as string | undefined) ??
+    (user.user_metadata?.name as string | undefined) ??
+    user.email ??
+    "Teacher";
+
   return (
     <ResultsDashboard
       roomId={params.roomId}
@@ -60,7 +66,7 @@ export default async function ResultsPage({ params }: Props) {
       questions={(questions ?? []) as QuestionRow[]}
       initialPlayers={(players ?? []) as PlayerRow[]}
       initialAnswers={answers}
-      email={user.email!}
+      name={displayName}
     />
   );
 }

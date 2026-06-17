@@ -25,7 +25,7 @@ interface Props {
   questions: Question[];
   initialPlayers: Player[];
   initialAnswers: Answer[];
-  email: string;
+  name: string;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -112,7 +112,7 @@ export default function ResultsDashboard({
   questions,
   initialPlayers,
   initialAnswers,
-  email,
+  name,
 }: Props) {
   const router = useRouter();
   const [players, setPlayers] = useState<Player[]>(initialPlayers);
@@ -267,7 +267,7 @@ export default function ResultsDashboard({
 
       {/* Sticky header */}
       <header className="sticky top-0 z-10">
-        <TeacherNav email={email} />
+        <TeacherNav name={name} />
         <div className="bg-slate-950/90 backdrop-blur-xl border-b border-white/8">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-3 flex-wrap">
             <button
