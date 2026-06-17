@@ -156,29 +156,12 @@ export default function ResultsDashboard({
   const fetchLatestData = useCallback(async () => {
     setRefreshing(true);
     try {
-      const supabase = createSupabaseBrowserClient();
-
-      const { data: latestPlayers } = await supabase
-        .from("players")
-        .select("id, nickname, score")
-        .eq("room_id", roomId)
-        .order("score", { ascending: false });
-
-      if (latestPlayers) {
-        setPlayers(latestPlayers);
-        playerIdsRef.current = new Set(latestPlayers.map((p: Player) => p.id));
-
-        const playerIds = latestPlayers.map((p: Player) => p.id);
-        if (playerIds.length > 0) {
-          const { data: latestAnswers } = await supabase
-            .from("answers")
-            .select("player_id, question_id, selected_answer, is_correct")
-            .in("player_id", playerIds);
-          if (latestAnswers) setAnswers(latestAnswers);
-        } else {
-          setAnswers([]);
-        }
-      }
+      const res = await fetch(`/api/room-results/${roomId}`);
+      if (!res.ok) return;
+      const data = await res.json() as { players: Player[]; answers: Answer[] };
+      setPlayers(data.players);
+      playerIdsRef.current = new Set(data.players.map((p) => p.id));
+      setAnswers(data.answers);
       setLastRefreshed(new Date());
     } catch {
       // silently ignore — user can retry

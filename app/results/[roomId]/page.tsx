@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 import ResultsDashboard from "./ResultsDashboard";
 
 interface Props {
@@ -44,7 +45,7 @@ export default async function ResultsPage({ params }: Props) {
   const playerIds = (players ?? []).map((p) => p.id);
   let answers: AnswerRow[] = [];
   if (playerIds.length > 0) {
-    const { data } = await supabase
+    const { data } = await supabaseAdmin
       .from("answers")
       .select("player_id, question_id, selected_answer, is_correct")
       .in("player_id", playerIds);
