@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { fadeUp, staggerContainer } from "@/lib/motion";
@@ -123,17 +124,49 @@ export default function LandingPage() {
 
           {/* Feature pills */}
           <motion.div variants={fadeUp} className="flex flex-wrap justify-center gap-3 pt-2">
-            {[
-              { icon: "📄", text: "Upload any PDF" },
-              { icon: "🤖", text: "AI-generated questions" },
-              { icon: "📱", text: "Students join on mobile" },
-              { icon: "📊", text: "Live leaderboard" },
-            ].map(({ icon, text }) => (
+            {(
+              [
+                {
+                  icon: (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 text-indigo-400 shrink-0">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/>
+                    </svg>
+                  ),
+                  text: "Upload any PDF",
+                },
+                {
+                  icon: (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 text-violet-400 shrink-0">
+                      <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>
+                    </svg>
+                  ),
+                  text: "AI-generated questions",
+                },
+                {
+                  icon: (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 text-indigo-400 shrink-0">
+                      <rect x="5" y="2" width="14" height="20" rx="2"/>
+                      <path d="M12 18h.01"/>
+                    </svg>
+                  ),
+                  text: "Students join on mobile",
+                },
+                {
+                  icon: (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 text-violet-400 shrink-0">
+                      <path d="M18 20V10M12 20V4M6 20v-6"/>
+                    </svg>
+                  ),
+                  text: "Live leaderboard",
+                },
+              ] as { icon: ReactNode; text: string }[]
+            ).map(({ icon, text }) => (
               <div
                 key={text}
-                className="flex items-center gap-2 px-4 py-2 bg-white/6 rounded-full text-sm text-white/60 border border-white/10 backdrop-blur-sm"
+                className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full text-sm text-white/60 border border-white/10 backdrop-blur-sm"
               >
-                <span>{icon}</span>
+                {icon}
                 {text}
               </div>
             ))}

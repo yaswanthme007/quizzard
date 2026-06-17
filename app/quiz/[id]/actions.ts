@@ -86,13 +86,19 @@ function randomCode(): string {
 export async function publishQuiz(
   quizId: string
 ): Promise<{ roomId: string; code: string; qrDataUrl: string }> {
-  const { supabase } = await verifyOwnership(quizId);
+  const { supabase, user } = await verifyOwnership(quizId);
+
+  const hostName: string =
+    (user.user_metadata?.full_name as string | undefined) ??
+    (user.user_metadata?.name as string | undefined) ??
+    user.email ??
+    "Teacher";
 
   const code = randomCode();
 
   const { data: room, error: roomError } = await supabase
     .from("rooms")
-    .insert({ quiz_id: quizId, code, status: "active" })
+    .insert({ quiz_id: quizId, code, status: "active", host_name: hostName })
     .select("id")
     .single();
 

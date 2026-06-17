@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -10,12 +10,34 @@ export default function JoinForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
+  const [hostName, setHostName] = useState<string | null>(null);
+  const [roomLookupDone, setRoomLookupDone] = useState(false);
   const refs = useRef<Array<HTMLInputElement | null>>(Array(6).fill(null));
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const sessionExpired = searchParams.get("error") === "session_expired";
   const code = boxes.join("");
+
+  useEffect(() => {
+    if (code.length !== 6) {
+      setHostName(null);
+      setRoomLookupDone(false);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/room-info?code=${code}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return;
+        setHostName(data.hostName ?? null);
+        setRoomLookupDone(true);
+      })
+      .catch(() => {
+        if (!cancelled) setRoomLookupDone(true);
+      });
+    return () => { cancelled = true; };
+  }, [code]);
 
   function handleBoxChange(i: number, val: string) {
     const char = val.slice(-1).toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -142,6 +164,19 @@ export default function JoinForm() {
                 />
               ))}
             </div>
+            <AnimatePresence>
+              {roomLookupDone && hostName && (
+                <motion.p
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="mt-3 text-center text-xs text-white/40"
+                >
+                  Hosted by{" "}
+                  <span className="text-indigo-400 font-medium">{hostName}</span>
+                </motion.p>
+              )}
+            </AnimatePresence>
           </div>
 
           <div>

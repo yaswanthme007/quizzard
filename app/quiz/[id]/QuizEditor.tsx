@@ -28,7 +28,7 @@ interface ExistingRoom {
 interface Props {
   quiz: QuizProps;
   existingRoom: ExistingRoom | null;
-  userEmail: string;
+  userName: string;
 }
 
 type PublishedRoom = { roomId: string; code: string; qrDataUrl: string };
@@ -230,7 +230,7 @@ function QuestionCard({ q, index, total, dbIds, onChange, onDelete, onMove, onRe
 
 // ─── Main Editor ──────────────────────────────────────────────────────────────
 
-export default function QuizEditor({ quiz, existingRoom, userEmail }: Props) {
+export default function QuizEditor({ quiz, existingRoom, userName }: Props) {
   const router = useRouter();
   const reduced = useReducedMotion();
   const [title, setTitle] = useState(quiz.title);
@@ -346,7 +346,7 @@ export default function QuizEditor({ quiz, existingRoom, userEmail }: Props) {
     <div className="min-h-screen bg-slate-950">
       {/* Sticky header: nav + controls */}
       <div className="sticky top-0 z-20">
-        <TeacherNav email={userEmail} />
+        <TeacherNav name={userName} />
         <div className="bg-slate-950/90 backdrop-blur-xl border-b border-white/8">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-3">
             <button

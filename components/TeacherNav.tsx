@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 
-export default function TeacherNav({ email }: { email: string }) {
+export default function TeacherNav({ name }: { name: string }) {
   const router = useRouter();
 
   async function handleSignOut() {
@@ -30,8 +30,8 @@ export default function TeacherNav({ email }: { email: string }) {
           Quizzard
         </Link>
         <span className="flex-1" />
-        <span className="text-sm text-white/35 hidden sm:block truncate max-w-xs font-mono">
-          {email}
+        <span className="text-sm text-white/50 hidden sm:block truncate max-w-xs">
+          {name}
         </span>
         <motion.button
           onClick={handleSignOut}

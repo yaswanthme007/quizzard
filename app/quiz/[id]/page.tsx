@@ -34,6 +34,12 @@ export default async function QuizPage({ params }: Props) {
     .limit(1)
     .maybeSingle();
 
+  const displayName: string =
+    (user.user_metadata?.full_name as string | undefined) ??
+    (user.user_metadata?.name as string | undefined) ??
+    user.email ??
+    "Teacher";
+
   const sortedQuestions = [...((quiz.questions as QuestionRow[]) ?? [])].sort(
     (a, b) => a.order_index - b.order_index
   );
@@ -55,7 +61,7 @@ export default async function QuizPage({ params }: Props) {
         })),
       }}
       existingRoom={room ?? null}
-      userEmail={user.email!}
+      userName={displayName}
     />
   );
 }

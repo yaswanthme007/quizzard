@@ -35,11 +35,17 @@ export default async function DashboardPage() {
   const quizzes = quizzesResult.data ?? [];
   const hasApiKey = !!(profile?.groq_api_key) || !!process.env.GROQ_API_KEY;
 
-  const avatarInitial = (user.email?.[0] ?? "T").toUpperCase();
+  const displayName: string =
+    (user.user_metadata?.full_name as string | undefined) ??
+    (user.user_metadata?.name as string | undefined) ??
+    user.email ??
+    "Teacher";
+
+  const avatarInitial = displayName[0].toUpperCase();
 
   return (
     <div className="min-h-screen bg-slate-950">
-      <TeacherNav email={user.email!} />
+      <TeacherNav name={displayName} />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -52,7 +58,7 @@ export default async function DashboardPage() {
                   {avatarInitial}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-white truncate">{user.email}</p>
+                  <p className="text-sm font-semibold text-white truncate">{displayName}</p>
                   <p className="text-xs text-white/35 mt-0.5">
                     {quizzes.length} {quizzes.length === 1 ? "quiz" : "quizzes"} created
                   </p>
