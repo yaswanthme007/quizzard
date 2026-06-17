@@ -81,35 +81,44 @@ export default function LandingPage() {
           </motion.p>
 
           {/* CTAs */}
-          <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 justify-center pt-2">
-            <motion.div
-              whileHover={reduced ? {} : { scale: 1.03, boxShadow: "0 0 32px rgba(99,102,241,0.5)" }}
-              whileTap={reduced ? {} : { scale: 0.97 }}
-            >
-              <Link
-                href="/dashboard"
-                className="inline-flex items-center justify-center gap-2.5 px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white text-base font-semibold rounded-2xl transition-colors duration-200 shadow-lg"
+          <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-5 justify-center pt-2">
+            {/* Teacher path */}
+            <div className="flex flex-col items-center gap-2">
+              <motion.div
+                whileHover={reduced ? {} : { scale: 1.03, boxShadow: "0 0 32px rgba(99,102,241,0.5)" }}
+                whileTap={reduced ? {} : { scale: 0.97 }}
               >
-                Create a Quiz
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </Link>
-            </motion.div>
-            <motion.div
-              whileHover={reduced ? {} : { scale: 1.03, boxShadow: "0 0 24px rgba(255,255,255,0.08)" }}
-              whileTap={reduced ? {} : { scale: 0.97 }}
-            >
-              <Link
-                href="/join"
-                className="inline-flex items-center justify-center gap-2.5 px-8 py-4 bg-white/8 hover:bg-white/12 border border-white/15 text-white text-base font-semibold rounded-2xl transition-all duration-200 backdrop-blur-sm"
+                <Link
+                  href="/login"
+                  className="inline-flex items-center justify-center gap-2.5 px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white text-base font-semibold rounded-2xl transition-colors duration-200 shadow-lg"
+                >
+                  Create a Quiz
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </Link>
+              </motion.div>
+              <span className="text-xs text-white/30">For teachers</span>
+            </div>
+
+            {/* Student path */}
+            <div className="flex flex-col items-center gap-2">
+              <motion.div
+                whileHover={reduced ? {} : { scale: 1.03, boxShadow: "0 0 24px rgba(255,255,255,0.08)" }}
+                whileTap={reduced ? {} : { scale: 0.97 }}
               >
-                Join a Quiz
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 7l5 5m0 0l-5 5m5-5H4" />
-                </svg>
-              </Link>
-            </motion.div>
+                <Link
+                  href="/join"
+                  className="inline-flex items-center justify-center gap-2.5 px-8 py-4 bg-white/8 hover:bg-white/12 border border-white/15 text-white text-base font-semibold rounded-2xl transition-all duration-200 backdrop-blur-sm"
+                >
+                  Join a Quiz
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 7l5 5m0 0l-5 5m5-5H4" />
+                  </svg>
+                </Link>
+              </motion.div>
+              <span className="text-xs text-white/30">For students · no login needed</span>
+            </div>
           </motion.div>
 
           {/* Feature pills */}

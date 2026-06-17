@@ -46,6 +46,10 @@ export default function PdfUploader({ hasApiKey }: { hasApiKey: boolean }) {
       body.append("file", file);
 
       const res = await fetch("/api/extract-pdf", { method: "POST", body });
+      const contentType = res.headers.get("content-type") ?? "";
+      if (!contentType.includes("application/json")) {
+        throw new Error(`Server error (${res.status}). Please try again.`);
+      }
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Extraction failed.");
       setResult(data as ExtractionResult);

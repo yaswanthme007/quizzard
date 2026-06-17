@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
@@ -217,6 +218,13 @@ export default function LoginPage() {
             {loading ? "Please wait…" : mode === "signin" ? "Sign In" : "Create Account"}
           </motion.button>
         </form>
+
+        <p className="mt-6 text-center text-sm text-white/30">
+          Joining a quiz?{" "}
+          <Link href="/join" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
+            Enter your room code here →
+          </Link>
+        </p>
       </motion.div>
     </div>
   );
