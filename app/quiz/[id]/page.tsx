@@ -24,15 +24,24 @@ export default async function QuizPage({ params }: Props) {
 
   if (!quiz) redirect("/dashboard");
 
-  // Load existing active room if quiz is already published
-  const { data: room } = await supabase
-    .from("rooms")
-    .select("id, code")
-    .eq("quiz_id", params.id)
-    .eq("status", "active")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // Load existing active room (for the publish panel) and all rooms (for sessions history)
+  const [roomResult, allRoomsResult] = await Promise.all([
+    supabase
+      .from("rooms")
+      .select("id, code")
+      .eq("quiz_id", params.id)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("rooms")
+      .select("id, code, status, created_at")
+      .eq("quiz_id", params.id)
+      .order("created_at", { ascending: false }),
+  ]);
+  const room = roomResult.data;
+  const allRooms = (allRoomsResult.data ?? []) as RoomSession[];
 
   const displayName: string =
     (user.user_metadata?.full_name as string | undefined) ??
@@ -61,9 +70,17 @@ export default async function QuizPage({ params }: Props) {
         })),
       }}
       existingRoom={room ?? null}
+      sessions={allRooms}
       userName={displayName}
     />
   );
+}
+
+interface RoomSession {
+  id: string;
+  code: string;
+  status: string;
+  created_at: string;
 }
 
 interface QuestionRow {

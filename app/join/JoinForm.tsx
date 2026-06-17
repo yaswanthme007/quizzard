@@ -12,12 +12,26 @@ export default function JoinForm() {
   const [shake, setShake] = useState(false);
   const [hostName, setHostName] = useState<string | null>(null);
   const [roomLookupDone, setRoomLookupDone] = useState(false);
+  const [codeFromUrl, setCodeFromUrl] = useState(false);
   const refs = useRef<Array<HTMLInputElement | null>>(Array(6).fill(null));
+  const nicknameRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const sessionExpired = searchParams.get("error") === "session_expired";
   const code = boxes.join("");
+
+  // Auto-fill code from ?code= URL param (QR scan path)
+  useEffect(() => {
+    const urlCode = searchParams.get("code");
+    if (!urlCode) return;
+    const clean = urlCode.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
+    if (clean.length !== 6) return;
+    setBoxes(clean.split(""));
+    setCodeFromUrl(true);
+    setTimeout(() => nicknameRef.current?.focus(), 120);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (code.length !== 6) {
@@ -112,7 +126,9 @@ export default function JoinForm() {
       {/* Logo */}
       <div className="text-center mb-8">
         <h1 className="font-display text-4xl font-bold text-white tracking-tight">Quizzard</h1>
-        <p className="mt-2 text-white/45 text-sm">Enter your room code to join</p>
+        <p className="mt-2 text-white/45 text-sm">
+          {codeFromUrl ? "Enter your name to join" : "Enter your room code to join"}
+        </p>
       </div>
 
       <motion.div
@@ -140,50 +156,87 @@ export default function JoinForm() {
         </AnimatePresence>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* OTP-style 6-box code input */}
-          <div>
-            <label className="block text-sm font-medium text-white/55 mb-3 text-center tracking-wide">
-              Room Code
-            </label>
-            <div className="flex gap-2 justify-center">
-              {boxes.map((char, i) => (
-                <motion.input
-                  key={i}
-                  ref={(el) => { refs.current[i] = el; }}
-                  type="text"
-                  inputMode="text"
-                  maxLength={2}
-                  value={char}
-                  onChange={(e) => handleBoxChange(i, e.target.value)}
-                  onKeyDown={(e) => handleKeyDown(i, e)}
-                  onPaste={handlePaste}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.06 }}
-                  className="w-11 h-14 text-center text-xl font-bold font-mono text-white bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 focus:bg-white/10 uppercase caret-indigo-400 transition-all"
-                />
-              ))}
+          {codeFromUrl ? (
+            /* QR scan: show code as a read-only display */
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white/4 border border-white/8 rounded-xl px-4 py-3 text-center"
+            >
+              <p className="text-xs font-semibold text-white/35 uppercase tracking-widest mb-1.5">
+                Room Code
+              </p>
+              <p className="font-mono text-3xl font-bold tracking-[0.22em] text-white">
+                {code}
+              </p>
+              <AnimatePresence>
+                {roomLookupDone && hostName && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="mt-2 text-xs text-white/40"
+                  >
+                    Hosted by{" "}
+                    <span className="text-indigo-400 font-medium">{hostName}</span>
+                  </motion.p>
+                )}
+              </AnimatePresence>
+              <button
+                type="button"
+                onClick={() => { setCodeFromUrl(false); setBoxes(Array(6).fill("")); setHostName(null); setRoomLookupDone(false); }}
+                className="mt-2 text-xs text-white/30 hover:text-white/60 underline underline-offset-2 transition-colors"
+              >
+                Use a different code
+              </button>
+            </motion.div>
+          ) : (
+            /* Manual entry: OTP-style 6-box input */
+            <div>
+              <label className="block text-sm font-medium text-white/55 mb-3 text-center tracking-wide">
+                Room Code
+              </label>
+              <div className="flex gap-2 justify-center">
+                {boxes.map((char, i) => (
+                  <motion.input
+                    key={i}
+                    ref={(el) => { refs.current[i] = el; }}
+                    type="text"
+                    inputMode="text"
+                    maxLength={2}
+                    value={char}
+                    onChange={(e) => handleBoxChange(i, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(i, e)}
+                    onPaste={handlePaste}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.06 }}
+                    className="w-11 h-14 text-center text-xl font-bold font-mono text-white bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 focus:bg-white/10 uppercase caret-indigo-400 transition-all"
+                  />
+                ))}
+              </div>
+              <AnimatePresence>
+                {roomLookupDone && hostName && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="mt-3 text-center text-xs text-white/40"
+                  >
+                    Hosted by{" "}
+                    <span className="text-indigo-400 font-medium">{hostName}</span>
+                  </motion.p>
+                )}
+              </AnimatePresence>
             </div>
-            <AnimatePresence>
-              {roomLookupDone && hostName && (
-                <motion.p
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="mt-3 text-center text-xs text-white/40"
-                >
-                  Hosted by{" "}
-                  <span className="text-indigo-400 font-medium">{hostName}</span>
-                </motion.p>
-              )}
-            </AnimatePresence>
-          </div>
+          )}
 
           <div>
             <label htmlFor="nickname" className="block text-sm font-medium text-white/55 mb-1.5">
               Your Nickname
             </label>
             <input
+              ref={nicknameRef}
               id="nickname"
               type="text"
               required

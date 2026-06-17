@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence, animate } from "framer-motion";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
@@ -44,6 +44,13 @@ function escapeCell(v: string): string {
   return v;
 }
 
+function timeAgo(date: Date): string {
+  const secs = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (secs < 5) return "just now";
+  if (secs < 60) return `${secs}s ago`;
+  return `${Math.floor(secs / 60)}m ago`;
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function StatBar({ correct, total }: { correct: number; total: number }) {
@@ -66,8 +73,6 @@ function StatBar({ correct, total }: { correct: number; total: number }) {
     </div>
   );
 }
-
-// ─── Close Room Modal ─────────────────────────────────────────────────────────
 
 function CloseRoomModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
   return (
@@ -122,6 +127,9 @@ export default function ResultsDashboard({
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [displayCount, setDisplayCount] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     const controls = animate(displayCount, players.length, {
@@ -133,9 +141,59 @@ export default function ResultsDashboard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [players.length]);
 
+  // Tick for updating "X ago" label
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 5000);
+    return () => clearInterval(id);
+  }, []);
+
   const playerIdsRef = useRef<Set<string>>(
     new Set(initialPlayers.map((p) => p.id))
   );
+
+  // ── Manual / auto refresh ────────────────────────────────────────────────
+
+  const fetchLatestData = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+
+      const { data: latestPlayers } = await supabase
+        .from("players")
+        .select("id, nickname, score")
+        .eq("room_id", roomId)
+        .order("score", { ascending: false });
+
+      if (latestPlayers) {
+        setPlayers(latestPlayers);
+        playerIdsRef.current = new Set(latestPlayers.map((p: Player) => p.id));
+
+        const playerIds = latestPlayers.map((p: Player) => p.id);
+        if (playerIds.length > 0) {
+          const { data: latestAnswers } = await supabase
+            .from("answers")
+            .select("player_id, question_id, selected_answer, is_correct")
+            .in("player_id", playerIds);
+          if (latestAnswers) setAnswers(latestAnswers);
+        } else {
+          setAnswers([]);
+        }
+      }
+      setLastRefreshed(new Date());
+    } catch {
+      // silently ignore — user can retry
+    } finally {
+      setRefreshing(false);
+    }
+  }, [roomId]);
+
+  // Auto-refresh every 10 s (fallback if realtime fails)
+  useEffect(() => {
+    const id = setInterval(fetchLatestData, 10_000);
+    return () => clearInterval(id);
+  }, [fetchLatestData]);
+
+  // ── Supabase Realtime ────────────────────────────────────────────────────
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
@@ -175,6 +233,8 @@ export default function ResultsDashboard({
     return () => { supabase.removeChannel(channel); };
   }, [roomId]);
 
+  // ── Derived state ────────────────────────────────────────────────────────
+
   const sortedPlayers = useMemo(
     () => [...players].sort((a, b) => b.score - a.score || a.nickname.localeCompare(b.nickname)),
     [players]
@@ -199,6 +259,8 @@ export default function ResultsDashboard({
     const total = players.reduce((acc, p) => acc + p.score, 0);
     return Math.round((total / players.length / questions.length) * 100);
   }, [players, questions.length]);
+
+  // ── Actions ──────────────────────────────────────────────────────────────
 
   async function handleCloseRoom() {
     setClosing(true);
@@ -249,6 +311,7 @@ export default function ResultsDashboard({
   }
 
   const totalQuestions = questions.length;
+  void tick; // used to re-render timeAgo
 
   return (
     <div className="min-h-screen bg-[#080810]">
@@ -269,45 +332,73 @@ export default function ResultsDashboard({
       <header className="sticky top-0 z-10">
         <TeacherNav name={name} />
         <div className="bg-[#080810]/90 backdrop-blur-xl border-b border-white/8">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-3 flex-wrap">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
+            {/* Back */}
             <button
               onClick={() => router.push("/dashboard")}
-              className="text-sm text-white/40 hover:text-white/80 transition-colors shrink-0"
+              className="flex items-center gap-1.5 text-sm text-white/40 hover:text-white/80 transition-colors shrink-0"
             >
-              ← Dashboard
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+              Dashboard
             </button>
 
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-white/35 truncate">{quizTitle}</p>
-            </div>
+            <span className="text-white/15 text-sm">/</span>
 
-            {status === "active" && (
-              <span className="flex items-center gap-1.5 text-xs font-medium text-green-400 shrink-0">
-                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                Live
-              </span>
-            )}
+            {/* Title */}
+            <p className="flex-1 min-w-0 text-sm font-medium text-white/70 truncate">
+              {quizTitle}
+            </p>
 
-            {status === "active" ? (
-              <motion.button
-                onClick={() => setShowCloseModal(true)}
-                disabled={closing}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="px-3 py-1.5 text-sm font-medium bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg hover:bg-red-500/15 disabled:opacity-50 transition-all shrink-0"
+            {/* Refresh */}
+            <button
+              onClick={fetchLatestData}
+              disabled={refreshing}
+              title="Refresh results"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-white/40 hover:text-white/70 border border-white/10 hover:border-white/20 rounded-lg bg-white/3 hover:bg-white/6 disabled:opacity-40 transition-all shrink-0"
+            >
+              <svg
+                className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
               >
-                {closing ? "Closing…" : "Close Room"}
-              </motion.button>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span className="hidden sm:inline">
+                {refreshing ? "Refreshing…" : timeAgo(lastRefreshed)}
+              </span>
+            </button>
+
+            {/* Status + close */}
+            {status === "active" ? (
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="flex items-center gap-1.5 text-xs font-medium text-green-400">
+                  <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                  Live
+                </span>
+                <motion.button
+                  onClick={() => setShowCloseModal(true)}
+                  disabled={closing}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="px-3 py-1.5 text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg hover:bg-red-500/15 disabled:opacity-50 transition-all"
+                >
+                  {closing ? "Closing…" : "Close Room"}
+                </motion.button>
+              </div>
             ) : (
               <span className="px-3 py-1.5 text-xs font-semibold bg-white/5 text-white/35 border border-white/10 rounded-lg shrink-0">
-                Room Closed
+                Closed
               </span>
             )}
           </div>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6">
         <AnimatePresence>
           {error && (
             <motion.div
@@ -322,8 +413,21 @@ export default function ResultsDashboard({
           )}
         </AnimatePresence>
 
-        {/* Top stats row */}
-        <div className="grid grid-cols-3 gap-4">
+        {/* Room code + stat cards row */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {/* Room code card */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="col-span-1 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex flex-col justify-between"
+          >
+            <p className="text-xs font-semibold text-white/35 uppercase tracking-widest mb-2">Code</p>
+            <p className="font-mono text-2xl font-bold tracking-[0.15em] text-white leading-none">
+              {roomCode}
+            </p>
+          </motion.div>
+
+          {/* Stat cards */}
           {[
             { label: "Players", value: displayCount, suffix: "" },
             { label: "Questions", value: totalQuestions, suffix: "" },
@@ -333,7 +437,7 @@ export default function ResultsDashboard({
               key={label}
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.08 }}
+              transition={{ delay: (i + 1) * 0.06 }}
               className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4 text-center"
             >
               <p className="font-display text-3xl font-bold text-white tabular-nums">
@@ -344,40 +448,25 @@ export default function ResultsDashboard({
           ))}
         </div>
 
-        {/* Room code + export */}
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-6">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
+        {/* Export CSV */}
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-white/25">
+            {status === "active"
+              ? "Updates every 10 s · realtime enabled"
+              : "Session closed · showing final results"}
+          </p>
+          <motion.button
+            onClick={exportCSV}
+            disabled={players.length === 0}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white/6 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white rounded-xl disabled:opacity-30 disabled:cursor-not-allowed transition-all"
           >
-            <p className="text-xs font-semibold text-white/35 uppercase tracking-widest mb-1">
-              Room Code
-            </p>
-            <p className="font-display text-5xl font-bold tracking-[0.2em] text-white font-mono">
-              {roomCode}
-            </p>
-            {status === "active" && (
-              <p className="text-xs text-white/30 mt-1">
-                Students join at <span className="font-medium text-white/50">/join</span>
-              </p>
-            )}
-          </motion.div>
-
-          <div className="sm:ml-auto">
-            <motion.button
-              onClick={exportCSV}
-              disabled={players.length === 0}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-white/8 hover:bg-white/12 border border-white/12 text-white/70 hover:text-white rounded-xl disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Export CSV
-            </motion.button>
-          </div>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Export CSV
+          </motion.button>
         </div>
 
         {/* Leaderboard */}
@@ -388,7 +477,7 @@ export default function ResultsDashboard({
 
           {sortedPlayers.length === 0 ? (
             <div className="bg-white/3 border border-dashed border-white/10 rounded-2xl px-6 py-12 text-center text-white/30 text-sm">
-              Waiting for students to join…
+              {status === "active" ? "Waiting for students to join…" : "No students joined this session."}
             </div>
           ) : (
             <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl divide-y divide-white/6 overflow-hidden">

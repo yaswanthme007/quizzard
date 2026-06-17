@@ -25,7 +25,7 @@ export default async function DashboardPage() {
       .maybeSingle(),
     supabase
       .from("quizzes")
-      .select("id, title, status, created_at, questions(id)")
+      .select("id, title, status, created_at, questions(id), rooms(id)")
       .eq("teacher_id", user.id)
       .order("created_at", { ascending: false })
       .limit(20),
@@ -74,6 +74,7 @@ export default async function DashboardPage() {
               status: string;
               created_at: string;
               questions: { id: string }[];
+              rooms: { id: string }[];
             }>} />
           </div>
 

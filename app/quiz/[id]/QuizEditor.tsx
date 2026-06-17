@@ -25,9 +25,17 @@ interface ExistingRoom {
   code: string;
 }
 
+interface RoomSession {
+  id: string;
+  code: string;
+  status: string;
+  created_at: string;
+}
+
 interface Props {
   quiz: QuizProps;
   existingRoom: ExistingRoom | null;
+  sessions: RoomSession[];
   userName: string;
 }
 
@@ -230,7 +238,7 @@ function QuestionCard({ q, index, total, dbIds, onChange, onDelete, onMove, onRe
 
 // ─── Main Editor ──────────────────────────────────────────────────────────────
 
-export default function QuizEditor({ quiz, existingRoom, userName }: Props) {
+export default function QuizEditor({ quiz, existingRoom, sessions, userName }: Props) {
   const router = useRouter();
   const reduced = useReducedMotion();
   const [title, setTitle] = useState(quiz.title);
@@ -463,6 +471,53 @@ export default function QuizEditor({ quiz, existingRoom, userName }: Props) {
         >
           + Add Question
         </button>
+
+        {/* Past sessions */}
+        {sessions.length > 0 && (
+          <div>
+            <h2 className="text-xs font-semibold text-white/35 uppercase tracking-widest mb-3">
+              Past Sessions
+            </h2>
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl divide-y divide-white/6 overflow-hidden">
+              {sessions.map((session) => (
+                <a
+                  key={session.id}
+                  href={`/results/${session.id}`}
+                  className="flex items-center gap-4 px-5 py-3.5 hover:bg-white/5 transition-colors group"
+                >
+                  <span className="font-mono text-base font-bold tracking-widest text-white/70 group-hover:text-white transition-colors">
+                    {session.code}
+                  </span>
+                  <span className="text-xs text-white/30">
+                    {new Date(session.created_at).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </span>
+                  <span
+                    className={`ml-auto text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${
+                      session.status === "active"
+                        ? "bg-green-500/15 text-green-400 border border-green-500/20"
+                        : "bg-white/6 text-white/35 border border-white/10"
+                    }`}
+                  >
+                    {session.status === "active" ? "Live" : "Closed"}
+                  </span>
+                  <svg
+                    className="w-4 h-4 text-white/20 group-hover:text-white/50 transition-colors shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Published room panel */}
         <AnimatePresence>

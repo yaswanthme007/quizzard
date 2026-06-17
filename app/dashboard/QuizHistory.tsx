@@ -10,6 +10,7 @@ type Quiz = {
   status: string;
   created_at: string;
   questions: { id: string }[];
+  rooms: { id: string }[];
 };
 
 export default function QuizHistory({ quizzes }: { quizzes: Quiz[] }) {
@@ -32,36 +33,48 @@ export default function QuizHistory({ quizzes }: { quizzes: Quiz[] }) {
           initial="hidden"
           animate="show"
         >
-          {quizzes.map((quiz) => (
-            <motion.button
-              key={quiz.id}
-              variants={listItem}
-              onClick={() => router.push(`/quiz/${quiz.id}`)}
-              className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/8 transition-all text-left group"
-            >
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white/80 group-hover:text-white truncate transition-colors">
-                  {quiz.title}
-                </p>
-                <p className="text-xs text-white/30 mt-0.5">
-                  {quiz.questions.length} question{quiz.questions.length !== 1 ? "s" : ""} ·{" "}
-                  {new Date(quiz.created_at).toLocaleDateString(undefined, {
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </p>
-              </div>
-              <span
-                className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${
-                  quiz.status === "published"
-                    ? "bg-green-500/15 text-green-400 border border-green-500/20"
-                    : "bg-white/6 text-white/35 border border-white/10"
-                }`}
+          {quizzes.map((quiz) => {
+            const sessionCount = quiz.rooms?.length ?? 0;
+            return (
+              <motion.button
+                key={quiz.id}
+                variants={listItem}
+                onClick={() => router.push(`/quiz/${quiz.id}`)}
+                className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/8 transition-all text-left group"
               >
-                {quiz.status}
-              </span>
-            </motion.button>
-          ))}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white/80 group-hover:text-white truncate transition-colors">
+                    {quiz.title}
+                  </p>
+                  <p className="text-xs text-white/30 mt-0.5">
+                    {quiz.questions.length} question{quiz.questions.length !== 1 ? "s" : ""}
+                    {sessionCount > 0 && (
+                      <>
+                        {" · "}
+                        <span className="text-indigo-400/70">
+                          {sessionCount} session{sessionCount !== 1 ? "s" : ""}
+                        </span>
+                      </>
+                    )}
+                    {" · "}
+                    {new Date(quiz.created_at).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </p>
+                </div>
+                <span
+                  className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${
+                    quiz.status === "published"
+                      ? "bg-green-500/15 text-green-400 border border-green-500/20"
+                      : "bg-white/6 text-white/35 border border-white/10"
+                  }`}
+                >
+                  {quiz.status}
+                </span>
+              </motion.button>
+            );
+          })}
         </motion.div>
       )}
     </div>
