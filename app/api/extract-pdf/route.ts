@@ -1,48 +1,22 @@
-import { PDFParse } from "pdf-parse";
-import { NextRequest, NextResponse } from "next/server";
+import { extractText, getDocumentProxy } from 'unpdf';
 
-export const runtime = "nodejs";
+export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-const MAX_BYTES = 20 * 1024 * 1024;
-
-export async function POST(request: NextRequest) {
+export async function POST(req: Request) {
   try {
-    let formData: FormData;
-    try {
-      formData = await request.formData();
-    } catch {
-      return NextResponse.json({ error: "Invalid multipart form data." }, { status: 400 });
-    }
+    const formData = await req.formData();
+    const file = formData.get('file') as File;
+    if (!file) return Response.json({ error: 'No file provided' }, { status: 400 });
+    if (file.size > 20 * 1024 * 1024) return Response.json({ error: 'File too large (max 20MB)' }, { status: 413 });
 
-    const entry = formData.get("file");
+    const buffer = await file.arrayBuffer();
+    const pdf = await getDocumentProxy(new Uint8Array(buffer));
+    const { text } = await extractText(pdf, { mergePages: true });
 
-    if (!entry || !(entry instanceof Blob)) {
-      return NextResponse.json({ error: "No file provided." }, { status: 400 });
-    }
-
-    if (entry.size > MAX_BYTES) {
-      return NextResponse.json({ error: "File exceeds 20 MB limit." }, { status: 413 });
-    }
-
-    const arrayBuffer = await entry.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    const parser = new PDFParse({ data: buffer });
-    let text: string;
-    try {
-      const result = await parser.getText();
-      text = result.text ?? "";
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "PDF parsing failed.";
-      return NextResponse.json({ error: message }, { status: 422 });
-    } finally {
-      await parser.destroy();
-    }
-
-    return NextResponse.json({ text, charCount: text.length });
+    return Response.json({ text, charCount: text.length });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unexpected server error.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('PDF extraction error:', err);
+    return Response.json({ error: 'Failed to extract PDF text' }, { status: 500 });
   }
 }
