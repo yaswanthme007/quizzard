@@ -262,7 +262,39 @@ export default function LobbyRoom({
     setTimeout(() => setNewIds((prev) => { const n = new Set(prev); n.delete(id); return n; }), 1400);
   }, []);
 
-  // Realtime — players joining + room status changes
+  // Poll /api/lobby-players every 2.5 s — uses supabaseAdmin server-side so
+  // it bypasses RLS and works for anonymous students too (not just the teacher).
+  useEffect(() => {
+    let cancelled = false;
+
+    async function poll() {
+      try {
+        const res = await fetch(`/api/lobby-players/${roomCode}`);
+        if (!res.ok || cancelled) return;
+        const { players: fetched } = (await res.json()) as { players: LobbyPlayer[] };
+        if (cancelled) return;
+        // Fire "new arrival" animation only for players not previously seen
+        fetched.forEach((p) => {
+          if (!playerIdsRef.current.has(p.id)) {
+            playerIdsRef.current.add(p.id);
+            markNew(p.id);
+          }
+        });
+        setPlayers(fetched);
+      } catch {}
+    }
+
+    poll(); // immediate first fetch
+    const id = setInterval(poll, 2500);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [roomCode, markNew]);
+
+  // Realtime — bonus fast-path for players joining + room status changes.
+  // May silently fail for anonymous students due to RLS; polling above is the
+  // reliable path. Realtime still handles the room status → redirect for all.
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
     const channel = supabase

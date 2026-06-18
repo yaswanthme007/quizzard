@@ -63,6 +63,11 @@ export async function POST(request: NextRequest) {
     .select("id")
     .single();
 
+  console.log("[join-room] insert result", {
+    roomId: room.id, roomStatus: room.status, nickname, avatar,
+    playerId: player?.id ?? null, error: playerError ?? null,
+  });
+
   if (playerError || !player) {
     return NextResponse.json({ error: "Failed to join room." }, { status: 500 });
   }
