@@ -73,16 +73,76 @@ export async function POST(request: NextRequest) {
   const provider: AIProvider =
     (profile?.ai_provider as AIProvider | null) ?? "groq";
 
-  let questionId: string;
+  let body: { questionId?: string; quizId?: string };
   try {
-    ({ questionId } = await request.json());
+    body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
+
+  const { questionId, quizId } = body;
+
+  // ── Generate NEW question (no questionId) ─────────────────────────────────
   if (!questionId) {
-    return NextResponse.json({ error: "'questionId' is required." }, { status: 400 });
+    if (!quizId) {
+      return NextResponse.json({ error: "'quizId' is required when generating a new question." }, { status: 400 });
+    }
+
+    const { data: quiz } = await supabase
+      .from("quizzes")
+      .select("teacher_id, source_text")
+      .eq("id", quizId)
+      .maybeSingle();
+
+    if (!quiz || quiz.teacher_id !== user.id) {
+      return NextResponse.json({ error: "Access denied." }, { status: 403 });
+    }
+
+    const { data: existingQuestions } = await supabase
+      .from("questions")
+      .select("question_text")
+      .eq("quiz_id", quizId);
+
+    const existingTexts = (existingQuestions ?? [])
+      .map((q, i) => `${i + 1}. ${q.question_text}`)
+      .join("\n");
+
+    const sourceText = (quiz.source_text ?? "").slice(0, TEXT_LIMIT);
+
+    const prompt =
+      `Based ONLY on the study material below, create ONE new multiple-choice question. ` +
+      `It must NOT duplicate any of the existing questions listed. ` +
+      `Return ONLY a single JSON object: { "question_text": "string", "options": ["string","string","string","string"], ` +
+      `"correct_answer": "the exact text of the correct option", ` +
+      `"explanation": "one sentence explaining why, based on the material" }.\n\n` +
+      (existingTexts ? `EXISTING QUESTIONS TO AVOID DUPLICATING:\n${existingTexts}\n\n` : "") +
+      `STUDY MATERIAL:\n"""${sourceText}"""`;
+
+    let raw: string;
+    try {
+      raw = await callAI(prompt, apiKey, provider);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "AI request failed.";
+      return NextResponse.json({ error: message }, { status: 502 });
+    }
+
+    let newQuestion: NewQuestion;
+    try {
+      newQuestion = parseOne(raw);
+    } catch {
+      try {
+        raw = await callAI(prompt, apiKey, provider, false);
+        newQuestion = parseOne(raw);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to parse question JSON.";
+        return NextResponse.json({ error: message }, { status: 502 });
+      }
+    }
+
+    return NextResponse.json({ question: newQuestion });
   }
 
+  // ── Regenerate EXISTING question ──────────────────────────────────────────
   const { data: question } = await supabase
     .from("questions")
     .select("id, question_text, options, correct_answer, explanation, order_index, quiz_id")

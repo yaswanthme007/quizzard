@@ -248,6 +248,7 @@ export default function QuizEditor({ quiz, existingRoom, sessions, userName }: P
   const [dbIds, setDbIds] = useState(() => new Set(quiz.questions.map((q) => q.id)));
 
   const [saving, setSaving] = useState(false);
+  const [generatingNew, setGeneratingNew] = useState(false);
   const [status, setStatus] = useState(quiz.status);
   const [publishedRoom, setPublishedRoom] = useState<PublishedRoom | null>(
     existingRoom ? { roomId: existingRoom.id, code: existingRoom.code, qrDataUrl: "" } : null
@@ -278,7 +279,37 @@ export default function QuizEditor({ quiz, existingRoom, sessions, userName }: P
   }
 
   function addQuestion() {
-    setQuestions((prev) => [...prev, blankQuestion()]);
+    setQuestions((prev) => [...prev, { ...blankQuestion(), order_index: prev.length }]);
+  }
+
+  async function handleGenerateNew() {
+    setGeneratingNew(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/regenerate-question", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quizId: quiz.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Generation failed.");
+      setQuestions((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          question_text: data.question.question_text,
+          options: data.question.options,
+          correct_answer: data.question.correct_answer,
+          explanation: data.question.explanation,
+          order_index: prev.length,
+          regenerating: false,
+        },
+      ]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Generation failed.");
+    } finally {
+      setGeneratingNew(false);
+    }
   }
 
   async function handleSave() {
@@ -348,7 +379,7 @@ export default function QuizEditor({ quiz, existingRoom, sessions, userName }: P
     }
   }
 
-  const anyRegenerating = questions.some((q) => q.regenerating);
+  const anyRegenerating = questions.some((q) => q.regenerating) || generatingNew;
 
   return (
     <div className="min-h-screen bg-[#080810]">
@@ -464,13 +495,45 @@ export default function QuizEditor({ quiz, existingRoom, sessions, userName }: P
         )}
 
         {/* Add question */}
-        <button
-          type="button"
-          onClick={addQuestion}
-          className="w-full py-3 border-2 border-dashed border-white/10 hover:border-indigo-500/40 rounded-2xl text-sm font-medium text-white/35 hover:text-indigo-400 hover:bg-indigo-500/5 transition-all"
-        >
-          + Add Question
-        </button>
+        <div className="flex flex-col items-center gap-2">
+          <button
+            type="button"
+            onClick={handleGenerateNew}
+            disabled={generatingNew || anyRegenerating || saving}
+            className="w-full py-3 px-4 rounded-2xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2"
+          >
+            {generatingNew ? (
+              <>
+                <motion.svg
+                  className="w-4 h-4 shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </motion.svg>
+                Generating…
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Generate Question with AI
+              </>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={addQuestion}
+            className="text-xs text-white/30 hover:text-white/55 transition-colors"
+          >
+            + Add blank question
+          </button>
+        </div>
 
         {/* Past sessions */}
         {sessions.length > 0 && (
