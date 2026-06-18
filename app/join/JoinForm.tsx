@@ -3,15 +3,10 @@
 import { useRef, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { AVATARS, AvatarSVG, type AvatarId } from "@/lib/avatars";
-
-type Step = "code" | "avatar";
 
 export default function JoinForm() {
   const [boxes, setBoxes] = useState<string[]>(Array(6).fill(""));
   const [nickname, setNickname] = useState("");
-  const [avatar, setAvatar] = useState<AvatarId>("zeke");
-  const [step, setStep] = useState<Step>("code");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
@@ -26,6 +21,7 @@ export default function JoinForm() {
   const sessionExpired = searchParams.get("error") === "session_expired";
   const code = boxes.join("");
 
+  // Auto-fill code from ?code= URL param (QR scan path)
   useEffect(() => {
     const urlCode = searchParams.get("code");
     if (!urlCode) return;
@@ -87,21 +83,18 @@ export default function JoinForm() {
     refs.current[Math.min(text.length, 5)]?.focus();
   }
 
-  function handleContinue(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (code.length !== 6 || nickname.trim().length === 0) return;
-    setStep("avatar");
-  }
-
-  async function handleJoin() {
     setLoading(true);
     setError(null);
+
     try {
       const res = await fetch("/api/join-room", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, nickname: nickname.trim(), avatar }),
+        body: JSON.stringify({ code, nickname: nickname.trim() }),
       });
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to join.");
 
@@ -110,11 +103,11 @@ export default function JoinForm() {
         JSON.stringify({
           playerId: data.playerId,
           nickname: nickname.trim(),
-          avatar,
           questions: data.questions,
         })
       );
-      router.push(`/lobby/${code}`);
+
+      router.push(`/play/${code}`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "An error occurred.");
       setShake(true);
@@ -123,114 +116,14 @@ export default function JoinForm() {
     }
   }
 
-  if (step === "avatar") {
-    return (
-      <motion.div
-        key="avatar-step"
-        initial={{ opacity: 0, x: 40 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.35, ease: "easeOut" }}
-        className="w-full max-w-sm"
-      >
-        <div className="text-center mb-6">
-          <h1 className="font-display text-3xl font-bold text-white tracking-tight">Pick your alien</h1>
-          <p className="mt-1.5 text-white/45 text-sm">Choose who you&apos;ll be in the lobby</p>
-        </div>
-
-        <motion.div
-          animate={shake ? { x: [0, -10, 10, -8, 8, -4, 4, 0] } : {}}
-          transition={{ duration: 0.5 }}
-          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 space-y-5"
-        >
-          <AnimatePresence>
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-300 overflow-hidden"
-              >
-                {error}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Preview of chosen avatar */}
-          <div className="flex justify-center">
-            <motion.div
-              key={avatar}
-              initial={{ scale: 0.7, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 400, damping: 22 }}
-              className="relative"
-            >
-              <div
-                className="rounded-full p-1"
-                style={{
-                  boxShadow: `0 0 30px ${AVATARS.find((a) => a.id === avatar)?.glow ?? "transparent"}`,
-                }}
-              >
-                <AvatarSVG id={avatar} size={88} />
-              </div>
-              <p className="text-center text-sm font-semibold text-white mt-2">
-                {AVATARS.find((a) => a.id === avatar)?.name}
-              </p>
-            </motion.div>
-          </div>
-
-          {/* Avatar grid */}
-          <div className="grid grid-cols-4 gap-3">
-            {AVATARS.map((a) => (
-              <motion.button
-                key={a.id}
-                type="button"
-                onClick={() => setAvatar(a.id)}
-                whileTap={{ scale: 0.92 }}
-                className={`relative rounded-xl p-1.5 transition-all ${
-                  avatar === a.id
-                    ? "ring-2 ring-white/60 bg-white/10"
-                    : "bg-white/5 hover:bg-white/10 border border-white/8 hover:border-white/20"
-                }`}
-                style={avatar === a.id ? { boxShadow: `0 0 16px ${a.glow}` } : undefined}
-              >
-                <AvatarSVG id={a.id} size={52} />
-                <p className="text-center text-[10px] text-white/50 mt-0.5 leading-tight">{a.name}</p>
-              </motion.button>
-            ))}
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setStep("code")}
-              className="px-4 py-3 text-sm font-medium text-white/50 border border-white/10 rounded-xl hover:bg-white/5 transition-all"
-            >
-              Back
-            </button>
-            <motion.button
-              type="button"
-              disabled={loading}
-              onClick={handleJoin}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-base font-semibold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-            >
-              {loading ? "Entering lobby…" : "Enter Lobby →"}
-            </motion.button>
-          </div>
-        </motion.div>
-      </motion.div>
-    );
-  }
-
   return (
     <motion.div
-      key="code-step"
       initial={{ opacity: 0, y: 32 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
       className="w-full max-w-sm"
     >
+      {/* Logo */}
       <div className="text-center mb-8">
         <h1 className="font-display text-4xl font-bold text-white tracking-tight">Quizzard</h1>
         <p className="mt-2 text-white/45 text-sm">
@@ -262,15 +155,20 @@ export default function JoinForm() {
           )}
         </AnimatePresence>
 
-        <form onSubmit={handleContinue} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {codeFromUrl ? (
+            /* QR scan: show code as a read-only display */
             <motion.div
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
               className="bg-white/4 border border-white/8 rounded-xl px-4 py-3 text-center"
             >
-              <p className="text-xs font-semibold text-white/35 uppercase tracking-widest mb-1.5">Room Code</p>
-              <p className="font-mono text-3xl font-bold tracking-[0.22em] text-white">{code}</p>
+              <p className="text-xs font-semibold text-white/35 uppercase tracking-widest mb-1.5">
+                Room Code
+              </p>
+              <p className="font-mono text-3xl font-bold tracking-[0.22em] text-white">
+                {code}
+              </p>
               <AnimatePresence>
                 {roomLookupDone && hostName && (
                   <motion.p
@@ -279,7 +177,8 @@ export default function JoinForm() {
                     exit={{ opacity: 0 }}
                     className="mt-2 text-xs text-white/40"
                   >
-                    Hosted by <span className="text-indigo-400 font-medium">{hostName}</span>
+                    Hosted by{" "}
+                    <span className="text-indigo-400 font-medium">{hostName}</span>
                   </motion.p>
                 )}
               </AnimatePresence>
@@ -292,6 +191,7 @@ export default function JoinForm() {
               </button>
             </motion.div>
           ) : (
+            /* Manual entry: OTP-style 6-box input */
             <div>
               <label className="block text-sm font-medium text-white/55 mb-3 text-center tracking-wide">
                 Room Code
@@ -323,7 +223,8 @@ export default function JoinForm() {
                     exit={{ opacity: 0 }}
                     className="mt-3 text-center text-xs text-white/40"
                   >
-                    Hosted by <span className="text-indigo-400 font-medium">{hostName}</span>
+                    Hosted by{" "}
+                    <span className="text-indigo-400 font-medium">{hostName}</span>
                   </motion.p>
                 )}
               </AnimatePresence>
@@ -351,12 +252,12 @@ export default function JoinForm() {
 
           <motion.button
             type="submit"
-            disabled={code.length !== 6 || nickname.trim().length === 0}
+            disabled={loading || code.length !== 6 || nickname.trim().length === 0}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white text-base font-semibold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-all"
           >
-            Pick Your Alien →
+            {loading ? "Joining…" : "Join Quiz"}
           </motion.button>
         </form>
       </motion.div>

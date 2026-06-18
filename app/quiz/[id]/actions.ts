@@ -98,7 +98,7 @@ export async function publishQuiz(
 
   const { data: room, error: roomError } = await supabase
     .from("rooms")
-    .insert({ quiz_id: quizId, code, status: "lobby", host_name: hostName })
+    .insert({ quiz_id: quizId, code, status: "active", host_name: hostName })
     .select("id")
     .single();
 

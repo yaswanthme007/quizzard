@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
-// DB migration: ALTER TABLE players ADD COLUMN avatar text NOT NULL DEFAULT 'zeke';
 export async function POST(request: NextRequest) {
-  let body: { code?: string; nickname?: string; avatar?: string };
+  let body: { code?: string; nickname?: string };
   try {
     body = await request.json();
   } catch {
@@ -12,7 +11,6 @@ export async function POST(request: NextRequest) {
 
   const code = body.code?.trim().toUpperCase() ?? "";
   const nickname = body.nickname?.trim() ?? "";
-  const avatar = body.avatar ?? "zeke";
 
   if (!code || !nickname) {
     return NextResponse.json({ error: "Code and nickname are required." }, { status: 400 });
@@ -37,7 +35,7 @@ export async function POST(request: NextRequest) {
       { status: 404 }
     );
   }
-  if (room.status !== "active" && room.status !== "lobby") {
+  if (room.status !== "active") {
     return NextResponse.json({ error: "This room is closed." }, { status: 403 });
   }
 
@@ -59,7 +57,7 @@ export async function POST(request: NextRequest) {
   // Insert player
   const { data: player, error: playerError } = await supabaseAdmin
     .from("players")
-    .insert({ room_id: room.id, nickname, score: 0, avatar })
+    .insert({ room_id: room.id, nickname, score: 0 })
     .select("id")
     .single();
 
