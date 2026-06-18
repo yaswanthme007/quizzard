@@ -14,6 +14,7 @@ export default function LandingUserNav({ name }: { name: string }) {
     setOpen(false);
     const supabase = createSupabaseBrowserClient();
     await supabase.auth.signOut();
+    router.push("/");
     router.refresh();
   }
 
